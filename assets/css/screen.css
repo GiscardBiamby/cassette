@@ -158,6 +158,9 @@ p {
 	margin:0 0 17px 0;
 	line-height: 1.7em;}
 
+pre {
+    margin:0 0 17px 0;}
+
 h1, h2, h3, h4, h5, h6 { 
 	font-family: "Droid Sans Bold", sans-serif;
 	color: #323231;
@@ -334,13 +337,13 @@ div.col2 .testimonial p {
 
 .header h1 {
 	position:relative;
+    color: #efefef;
+    text-shadow: #fff 0 0 1px;
 	top:27px;
 	margin:0;
 	padding:0;
 	width: 102px;
-	height: 24px;
-	text-indent: -9999px;
-	background:transparent url("../../images/logo.png") no-repeat top left; }
+	height: 24px;}
 
 .header ul.nav {
 	position:absolute;
