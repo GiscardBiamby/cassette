@@ -385,8 +385,7 @@ div.col2 .testimonial p {
 	width: 999px;
 	height: 353px;
 	margin:0;
-	background: transparent url("../../images/bg_showcase.png") no-repeat top center; }
-
+}
 .showcase .laptop {
 	position: absolute;
 	right:0;
@@ -394,6 +393,31 @@ div.col2 .testimonial p {
 	width:487px;
 	height:279px;
 	background: transparent url("../../images/laptop.png") no-repeat top right; }
+
+.showcase .sign-up {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 260px;
+    height: 230px;
+    background: #fff;
+    border-radius: 10px;
+}
+
+.showcase .sign-up form {
+    padding: 20px;
+    color: #000;
+}
+
+.sign-up input {
+    width: 215px;
+}
+
+.sign-up button {
+    padding: 5px;
+    margin-top: 5px;
+    margin-left: 0;
+}
 
 .showcase h2 {
 	font-family: "Droid Sans Bold", sans-serif;
@@ -403,7 +427,7 @@ div.col2 .testimonial p {
 	margin:60px 0 15px 0;
 	color:#fff;} 
 
-.showcase p {
+.showcase #slider p {
 	font-family:"Lucida Grande","Lucida Sans Unicode",Arial,Helvetica,sans-serif;
 	font-size:16px;
 	font-size-adjust:none;
@@ -413,7 +437,7 @@ div.col2 .testimonial p {
 	font-weight:normal;	
 	line-height:24px;
 	letter-spacing:-1px;
-	width: 450px;
+	width: 650px;
 	color:#fff;
 	text-shadow: 0 1px 0 #01456d }
 
@@ -600,7 +624,7 @@ div.col2 .testimonial p {
 
 .footer .twitter {
 	float:right;
-	width: 49%;
+	width: 35%;
 	margin:0;
 	padding:0;
 	line-height: 43px;
@@ -612,7 +636,7 @@ div.col2 .testimonial p {
 
 .footer .copy {
 	float:left;
-	width: 49%;
+	width: 55%;
 	line-height: 43px;
 	text-align: left; }
 

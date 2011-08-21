@@ -7,13 +7,13 @@
 /* Application Showcase */
 jQuery.noConflict();	
 	jQuery(document).ready(function(){  	
-		jQuery('#slider').innerfade({
+		/*jQuery('#slider').innerfade({
 				animationtype: 'fade', 
 				speed: '3000',
 				timeout: 7000,
 				type: 'sequence',
 				containerheight: 'auto'
-		});	
+		});	*/
 });
 
 /* Client Testimonials */

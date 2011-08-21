@@ -57,7 +57,6 @@
 		
 			<ul class="nav">
 				<li><a href="index.html" class="selected">Home</a></li>
-				<li><a href="get-started.html">Get Started</a></li>
 				<li><a href="https://github.com/andrewdavey/cassette">GitHub</a></li>
 				<li><a href="contact.html">Contact</a></li>
 			</ul>
@@ -66,48 +65,31 @@
 						
 			<div class="showcase">
 				
-				<div class="laptop"></div>
+                <div class="sign-up">
+                    <form action="http://equin.createsend.com/t/r/s/ahkkuj/" method="post" id="subForm">
+                        <p style="margin-bottom: 10px; font-size: 1.2em">
+                            <strong>Learn more about Cassette.<br/>Join the mailing list today.</strong>
+                        </p>
+                        <div>
+                            <label for="name">Name:</label><br /><input type="text" name="cm-name" id="name" /><br />
+                            <label for="ahkkuj-ahkkuj">Email address:</label><br /><input type="text" name="cm-ahkkuj-ahkkuj" id="ahkkuj-ahkkuj" /><br />
+                            <button type="submit">Join Mailing List</button>
+                        </div>
+                    </form>                
+                </div>
 				
 				<!-- slider container -->
 				<div id="slider">
 
 					<!-- slide 1 -->
 					<div class="slider_item">
-					
-						<h2>Cassette</h2>
-                        <p>
-                        Effectively manage hundreds of web application assets.
-                        </p>
-                        <p>
-                        Never debug into that 10,000 line minified script again!
-                        </p>
-                        <p>
-                        Optimized production deployment, with no code changes.
-                        <p>
-										
+						<h2>Asset Pipeline for .NET Web Apps</h2>
+                        <p>Automatic dependency management for all your scripts, stylesheets and HTML templates.
+                        Optimized for production deployment with a single config change.</p>
+                        <p>Never debug into a minified script again.</p>
+                        <p>Built-in support for CoffeeScript and Less.</p>
 					</div>
 					<!-- // slide 1 -->
-
-					<!-- slide 2 -->
-					<div class="slider_item">
-
-						<h2>Powerful &amp; fast</h2>
-						<p>Aliquam pulvinar orci sed metus dignissim quis malesuada massa imperdiet. Fusce imperdiet enim sit amet tellus molestie tempus. Cras ultrices, nunc in tempor pharetra, lorem urna aliquam dolor, eu ullamcorper neque turpis vel nisl. Mauris eget auctor libero. Suspendisse ut ipsum orci.</p>
-										
-					</div>
-					<!-- // slide 2 -->
-
-					<!-- slide 3 -->
-					<div class="slider_item">
-
-						<h2>Signup for free!</h2>
-						<p>Suspendisse bibendum suscipit vestibulum. Vivamus aliquet consequat risus vitae aliquet. Proin et nibh diam, et fringilla arcu. In faucibus, sapien sed imperdiet ultrices.</p>
-
-						<a href="#" class="btn">FREE SIGNUP</a> <a href="#" class="btn">FEATURE LIST</a>			
-
-					</div>
-					<!-- // slide 3 -->
-				
 				</div>
 				<!-- // slider container -->
 			
@@ -124,8 +106,17 @@
 			<div class="content clearfix">
 				
 				<div class="col1">
-				
-					<h3 class="topfeatures">Top Features<span><a href="#">See all features...</a></span></h3>
+                    <h3 class="topfeatures">Optimize for Developer Happiness!</h3> 
+                    <p>
+                    Modern web apps use a lot of assets, like JavaScript and CSS. These need to be correctly ordered, concatenated and minified for production deployment. But everyone hates stepping into minified JavaScript during development!
+                    </p>
+                    <p>
+                    Cassette provides an extensible asset pipeline to manage all your scripts, styles and HTML templates. Simply reference a script in a page and let Cassette pull in all the required dependencies. A single config change toggles Cassette between "developer happiness" mode and blazing production performance.
+                    </p>
+                    <p style="margin-bottom: 30px">
+                    So refactor that monolithic JavaScript into manageable files. Leverage the built-in CoffeeScript and LESS support. Even pre-compile all your HTML templates. Cassette is easy to extend to meet your needs and is totally open source!
+                    </p>
+					<h3 class="topfeatures">Top Features<span></span></h3>
 
 					<div class="block">
                         <h4>Asset dependency detection</h4>
@@ -156,23 +147,40 @@
 				<div class="col2">
 				
 					<h3 class="testimonials">Testimonials</h3>
+<script src="http://widgets.twimg.com/j/2/widget.js"></script>
+<script>
+new TWTR.Widget({
+  version: 2,
+  type: 'faves',
+  rpp: 10,
+  interval: 6000,
+  title: 'Twitter love for Cassette',
+  subject: '',
+  width: 280,
+  height: 300,
+  theme: {
+    shell: {
+      background: '#1b6d99',
+      color: '#ffffff'
+    },
+    tweets: {
+      background: '#ffffff',
+      color: '#444444',
+      links: '#1b6d99'
+    }
+  },
+  features: {
+    scrollbar: true,
+    loop: false,
+    live: true,
+    hashtags: true,
+    timestamp: false,
+    avatars: true,
+    behavior: 'all'
+  }
+}).render().setUser('getcassette').start();
+</script>
 					
-						<div id="slider2">
-
-							<div class="testimonial">
-								<h4>Simon Bouchard</h4>
-								<a href="http://www.simonbouchard.com" title="Simon Bouchard">http://www.simonbouchard.com</a>
-								<p>Sed gravida, erat in malesuada scelerisque, quam lacus suscipit nunc, ut sollicitudin metus est eget risus. Fusce porttitor nulla in massa posuere cursus eu id erat. Nam nec metus nunc, vel dapibus justo. Suspendisse fermentum felis nec tellus eleifend molestie. Pellentesque eget est vel ipsum luctus iaculis quis sagittis dolor.</p>				
-							</div>
-
-							<div class="testimonial">
-								<h4>Dany Duchaine, DDStudios</h4>
-								<a href="http://www.ddwebstudios.com" title="DDStudios">http://www.ddwebstudios.com</a>
-								<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse faucibus, felis in euismod elementum, lacus ipsum blandit lacus, non commodo nibh urna id arcu. Suspendisse imperdiet porta magna ac sollicitudin. Curabitur imperdiet elementum felis. Pellentesque eget est vel ipsum luctus iaculis quis sagittis dolor.</p>				
-							</div>
-					
-						</div>
-
 				</div>
 				
 			</div>
@@ -187,10 +195,10 @@
 		<div class="footer">			
 			
 			<div class="copy">
-				<p>Copyright &copy; 2009 Your Company. All rights reserved. &mdash; Designed by <a href="http://www.simonbouchard.com" title="Simon Bouchard">Simon Bouchard</a></p>		
+				<p>Copyright &copy; 2011 Andrew Davey. All rights reserved. &mdash; Website theme by <a href="http://www.simonbouchard.com" title="Simon Bouchard">Simon Bouchard</a></p>		
 			</div>
 			<div class="twitter">
-				<a href="#"><img src="images/bg_twitter.png" alt="Follow us on Twitter"></a>
+				<a href="http://twitter.com/getcassette"><img src="images/bg_twitter.png" alt="Follow us on Twitter"></a>
 			</div>
 
 		</div>
