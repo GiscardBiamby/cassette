@@ -47,7 +47,8 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=4.5.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.4.5.7\lib\net40\Newtonsoft.Json.dll</HintPath>
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\Newtonsoft.Json.4.5.10\lib\net40\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="NotFoundMvc">
       <HintPath>..\packages\NotFoundMvc.1.0.0\lib\net40\NotFoundMvc.dll</HintPath>
@@ -158,6 +159,10 @@
     <ProjectReference Include="..\Cassette.Aspnet\Cassette.Aspnet.csproj">
       <Project>{733F8032-D649-4E4C-A23E-4A048C33FCAE}</Project>
       <Name>Cassette.Aspnet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Cassette.Spriting\Cassette.Spriting.csproj">
+      <Project>{b775612c-baf8-4947-b83b-dd43f802e999}</Project>
+      <Name>Cassette.Spriting</Name>
     </ProjectReference>
     <ProjectReference Include="..\Cassette.Views\Cassette.Views.csproj">
       <Project>{3A021487-A395-4FE6-9B41-336D0F1E6AD0}</Project>
@@ -364,6 +369,9 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Views\Documentation\v2\MSBuild.cshtml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Views\Documentation\v2\Stylesheets\ImageSpriting.cshtml" />
   </ItemGroup>
   <PropertyGroup>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>

@@ -1,17 +1,70 @@
 ﻿using System;
 using System.CodeDom.Compiler;
+using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using Cassette.Utilities;
+using Microsoft.Build.Framework;
+using Microsoft.Build.Utilities;
 using Microsoft.CSharp;
 using Should;
 using Xunit;
 
 namespace Cassette.MSBuild
 {
+    [Serializable]
+    public class BuildEngineStub : IBuildEngine
+    {
+        public BuildEngineStub()
+        {
+            BuildErrorEventArgs = new List<BuildErrorEventArgs>();
+            BuildWarningEventArgs = new List<BuildWarningEventArgs>();
+            BuildMessageEventArgs = new List<BuildMessageEventArgs>();
+            CustomBuildEventArgs = new List<CustomBuildEventArgs>();
+        }
+
+        public List<BuildErrorEventArgs> BuildErrorEventArgs { get; set; }
+        public List<BuildWarningEventArgs> BuildWarningEventArgs { get; set; }
+        public List<BuildMessageEventArgs> BuildMessageEventArgs { get; set; }
+        public List<CustomBuildEventArgs> CustomBuildEventArgs { get; set; }
+
+        public void LogErrorEvent(BuildErrorEventArgs e)
+        {
+            BuildErrorEventArgs.Add(e);
+        }
+
+        public void LogWarningEvent(BuildWarningEventArgs e)
+        {
+            BuildWarningEventArgs.Add(e);
+        }
+
+        public void LogMessageEvent(BuildMessageEventArgs e)
+        {
+            BuildMessageEventArgs.Add(e);
+        }
+
+        public void LogCustomEvent(CustomBuildEventArgs e)
+        {
+            CustomBuildEventArgs.Add(e);
+        }
+
+        public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties,
+                                     IDictionary targetOutputs)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool ContinueOnError { get; private set; }
+        public int LineNumberOfTaskNode { get; private set; }
+        public int ColumnNumberOfTaskNode { get; private set; }
+        public string ProjectFileOfTaskNode { get; private set; }
+    }
+
     public class CreateBundlesWithRawFilesTests : IDisposable
     {
+        readonly BuildEngineStub buildEngine;
         readonly TempDirectory root;
 
         public CreateBundlesWithRawFilesTests()
@@ -27,17 +80,30 @@ namespace Cassette.MSBuild
 
             var configurationDll = CompileConfigurationDll();
 
-            File.Move(configurationDll, Path.Combine(root, "source", "bin", "test.dll"));
-            File.Copy("Cassette.dll", Path.Combine(root, "source", "bin", "Cassette.dll"));
-            File.Copy("Cassette.pdb", Path.Combine(root, "source", "bin", "Cassette.pdb"));
-            File.Copy("AjaxMin.dll", Path.Combine(root, "source", "bin", "AjaxMin.dll"));
+            File.Move(configurationDll, PathUtilities.Combine(root, "source", "bin", "test.dll"));
+            File.Copy("Cassette.dll", PathUtilities.Combine(root, "source", "bin", "Cassette.dll"));
+            File.Copy("Cassette.pdb", PathUtilities.Combine(root, "source", "bin", "Cassette.pdb"));
+            File.Copy("AjaxMin.dll", PathUtilities.Combine(root, "source", "bin", "AjaxMin.dll"));
+#if NET35
+            File.Copy("Iesi.Collections.dll", PathUtilities.Combine(root, "source", "bin", "Iesi.Collections.dll"));
+#endif
+            buildEngine = new BuildEngineStub();
+            var task = new CreateBundles
+            {
+                BuildEngine = buildEngine
+            };
+
+            var taskLoggingHelper = new TaskLoggingHelper(task);
 
             var command = new CreateBundlesCommand(
-                Path.Combine(root, "source"), 
-                Path.Combine(root, "source", "bin"),
-                Path.Combine(root, "output"),
-                true
+                PathUtilities.Combine(root, "source"),
+                PathUtilities.Combine(root, "source", "bin"),
+                PathUtilities.Combine(root, "output"),
+                "/",
+                true,
+                taskLoggingHelper
             );
+
             CreateBundlesCommand.ExecuteInSeparateAppDomain(command);
         }
 
@@ -56,7 +122,7 @@ public class Configuration : IConfiguration<BundleCollection>
     }
 }
 ");
-                var error = string.Join("\r\n", result.Errors.Cast<CompilerError>().Select(e => e.ErrorText));
+                var error = string.Join("\r\n", result.Errors.Cast<CompilerError>().Select(e => e.ErrorText).ToArray());
                 if (error.Length > 0) throw new Exception(error);
                 return result.PathToAssembly;
             }
@@ -65,13 +131,19 @@ public class Configuration : IConfiguration<BundleCollection>
         [Fact]
         public void ImageFileIsCopiedToOutput()
         {
-            var imageOutputFilename = Path.Combine(root, "output", "file", "test-" + HashFileContent("test.png") + ".png");
+            var imageOutputFilename = PathUtilities.Combine(root, "output", "file", "test-" + HashFileContent("test.png") + ".png");
             File.Exists(imageOutputFilename).ShouldBeTrue();
+        }
+
+        [Fact]
+        public void MessagesAreLogged()
+        {
+            buildEngine.BuildMessageEventArgs.Any().ShouldBeTrue();
         }
 
         string HashFileContent(string filename)
         {
-            using (var file = File.OpenRead(Path.Combine(root, "source", filename)))
+            using (var file = File.OpenRead(PathUtilities.Combine(root, "source", filename)))
             using (var sha1 = SHA1.Create())
             {
                 return sha1.ComputeHash(file).ToHexString();

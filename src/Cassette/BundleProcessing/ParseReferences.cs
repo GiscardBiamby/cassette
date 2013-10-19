@@ -21,6 +21,11 @@ namespace Cassette.BundleProcessing
             return true;
         }
 
+        protected virtual bool ShouldAddReference(string referencePath)
+        {
+            return true;
+        }
+
         void ParseAssetReferences(IAsset asset)
         {
             string code;
@@ -34,7 +39,10 @@ namespace Cassette.BundleProcessing
             var references = referenceParser.Parse(code, asset);
             foreach (var reference in references)
             {
-                asset.AddReference(reference.Path, reference.LineNumber);
+                if (ShouldAddReference(reference.Path))
+                {
+                    asset.AddReference(reference.Path, reference.LineNumber);
+                }
             }
         }
 
@@ -43,6 +51,6 @@ namespace Cassette.BundleProcessing
             return new ReferenceParser(commentParser);
         }
 
-        internal abstract ICommentParser CreateCommentParser();
+        protected abstract ICommentParser CreateCommentParser();
     }
 }

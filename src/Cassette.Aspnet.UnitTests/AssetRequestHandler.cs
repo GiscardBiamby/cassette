@@ -9,6 +9,7 @@ using Cassette.Utilities;
 using Moq;
 using Should;
 using Xunit;
+using System;
 
 namespace Cassette.Aspnet
 {
@@ -33,6 +34,7 @@ namespace Cassette.Aspnet
                           .Returns(new Dictionary<string, object>());
 
             var requestContext = new RequestContext(httpContext.Object, routeData);
+            request.SetupGet(x => x.RawUrl).Returns("~/test/010203/asset.js");
 
             response.SetupGet(r => r.OutputStream).Returns(() => outputStream);
             response.SetupGet(r => r.Cache).Returns(cache.Object);
@@ -54,7 +56,8 @@ namespace Cassette.Aspnet
         public void GivenBundleNotFound_WhenProcessRequest_ThenNotFoundResponse()
         {
             bundles.Clear();
-            handler.ProcessRequest(null);
+            var httpException = Assert.Throws<HttpException>(() => handler.ProcessRequest(null));
+            httpException.GetHttpCode().ShouldEqual(404);
             response.VerifySet(r => r.StatusCode = 404);
         }
 
@@ -62,8 +65,34 @@ namespace Cassette.Aspnet
         public void GivenBundleFoundButAssetIsNull_WhenProcessRequest_ThenNotFoundResponse()
         {
             bundles.Add(new TestableBundle("~/test"));
-            handler.ProcessRequest("~/test/asset.js");
+            var httpException = Assert.Throws<HttpException>(() => handler.ProcessRequest("~/test/asset.js"));
+            httpException.GetHttpCode().ShouldEqual(404);
             response.VerifySet(r => r.StatusCode = 404);
+        }
+
+        [Fact]
+        public void GivenAssetExists_WhenProcessRequest_ThenMaxAgeIsSetToAYear()
+        {
+            bundles.Add(new TestableBundle("~/test")
+            {
+                ContentType = "CONTENT/TYPE"
+            });
+            var asset = new Mock<IAsset>();
+            asset.Setup(a => a.Accept(It.IsAny<IBundleVisitor>()))
+                 .Callback<IBundleVisitor>(v => v.Visit(asset.Object));
+            asset.SetupGet(a => a.Path)
+                 .Returns("~/test/asset.js");
+            asset.Setup(a => a.OpenStream())
+                 .Returns(Stream.Null);
+            bundles.First().Assets.Add(asset.Object);
+
+            using (outputStream = new MemoryStream())
+            {
+                handler.ProcessRequest("~/test/asset.js");
+            }
+
+            cache.Verify(c => c.SetCacheability(HttpCacheability.Public));
+            cache.Verify(c => c.SetMaxAge(It.Is<TimeSpan>(t => t.Days == 365)));
         }
 
         [Fact]
@@ -128,6 +157,21 @@ namespace Cassette.Aspnet
             }
 
             response.VerifySet(r => r.StatusCode = 304);
+        }
+
+        [Fact]
+        public void GivenRequestWithDifferingHash_WhenProcessRequest_ThenReturn3NoCacheResponse() {
+            bundles.Add(new TestableBundle("~/test"));
+            var asset = new StubAsset("~/test/asset.js", hash: new byte[] { 1, 2, 3 });
+            bundles.First().Assets.Add(asset);
+
+            request.SetupGet(x => x.RawUrl).Returns("~/test/HASH-MISMATCH/asset.js");
+            using(outputStream = new MemoryStream()) {
+                requestHeaders.Add("If-None-Match", "\"010203\"");
+                handler.ProcessRequest("~/test/asset.js");
+            }
+
+            response.VerifySet(r => r.CacheControl = "no-cache");
         }
     }
 }

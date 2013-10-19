@@ -10,60 +10,76 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Cassette</RootNamespace>
     <AssemblyName>Cassette</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <TargetFrameworkVersion Condition="'$(Configuration)|$(Platform)' == 'DebugNET35|AnyCPU'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition="'$(Configuration)|$(Platform)' == 'ReleaseNET35|AnyCPU'">v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion Condition=" '$(TargetFrameworkVersion)' == '' ">v4.0</TargetFrameworkVersion>
     <RestorePackages>true</RestorePackages>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(TargetFrameworkVersion)' == 'v4.0' ">
+    <TargetFrameworkConstant>NET40</TargetFrameworkConstant>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(TargetFrameworkVersion)' == 'v3.5' ">
+    <TargetFrameworkConstant>NET35</TargetFrameworkConstant>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NET40</DefineConstants>
+    <OutputPath>bin\$(Configuration)\$(TargetFrameworkConstant)</OutputPath>
+    <BaseIntermediateOutputPath>obj\$(Configuration)\$(TargetFrameworkConstant)</BaseIntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE;$(TargetFrameworkConstant)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFrameworkConstant)\Cassette.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE;NET40</DefineConstants>
+    <OutputPath>bin\$(Configuration)\$(TargetFrameworkConstant)</OutputPath>
+    <BaseIntermediateOutputPath>obj\$(Configuration)\$(TargetFrameworkConstant)</BaseIntermediateOutputPath>
+    <DefineConstants>TRACE;$(TargetFrameworkConstant)</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFrameworkConstant)\Cassette.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugNET35|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\DebugNET35\</OutputPath>
-    <DefineConstants>DEBUG;TRACE;NET35</DefineConstants>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <OutputPath>bin\$(Configuration)\$(TargetFrameworkConstant)</OutputPath>
+    <BaseIntermediateOutputPath>obj\$(Configuration)\$(TargetFrameworkConstant)</BaseIntermediateOutputPath>
+    <DefineConstants>DEBUG;TRACE;$(TargetFrameworkConstant)</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFrameworkConstant)\Cassette.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseNET35|AnyCPU'">
-    <OutputPath>bin\ReleaseNET35\</OutputPath>
-    <DefineConstants>TRACE;NET35</DefineConstants>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <OutputPath>bin\$(Configuration)\$(TargetFrameworkConstant)</OutputPath>
+    <BaseIntermediateOutputPath>obj\$(Configuration)\$(TargetFrameworkConstant)</BaseIntermediateOutputPath>
+    <DefineConstants>TRACE;$(TargetFrameworkConstant)</DefineConstants>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
+    <DocumentationFile>bin\$(Configuration)\$(TargetFrameworkConstant)\Cassette.XML</DocumentationFile>
+    <NoWarn>1591</NoWarn>
   </PropertyGroup>
-  <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v3.5'">
-    <Reference Include="Iesi.Collections">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\Iesi.Collections.3.2.0.4000\lib\Net35\Iesi.Collections.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <ItemGroup Condition="'$(TargetFrameworkVersion)' == 'v4.0'">
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="AjaxMin, Version=5.2.5021.15808, Culture=neutral, PublicKeyToken=21ef50ce11b5d80f, processorArchitecture=MSIL">
+    <Reference Include="AjaxMin">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\src\packages\AjaxMin.5.2.5021.15814\lib\net40\AjaxMin.dll</HintPath>
+      <HintPath Condition="'$(TargetFrameworkVersion)' == 'v3.5'">..\packages\AjaxMin.4.84.4790.14417\lib\net35\AjaxMin.dll</HintPath>
+      <HintPath Condition="'$(TargetFrameworkVersion)' == 'v4.0'">..\packages\AjaxMin.4.84.4790.14417\lib\net40\AjaxMin.dll</HintPath>
+    </Reference>
+    <Reference Include="Iesi.Collections">
+      <HintPath>..\packages\Iesi.Collections.3.3.2.4000\lib\Net35\Iesi.Collections.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.configuration" />
@@ -80,6 +96,7 @@
     <Compile Include="BundleCacheRebuilder.cs" />
     <Compile Include="BundleCollectionChangedEventArgs.cs" />
     <Compile Include="BundleEnumerableExtensions.cs" />
+    <Compile Include="BundleProcessing\ExternalBundleGenerator.cs" />
     <Compile Include="Caching\BundleCollectionCache.cs" />
     <Compile Include="Caching\BundleCollectionCacheReader.cs" />
     <Compile Include="Caching\ManifestValidator.cs" />
@@ -93,17 +110,28 @@
     <Compile Include="ConfigurationEnumerableExtensions.cs" />
     <Compile Include="ConfigurationOrderAttribute.cs" />
     <Compile Include="ContainerConfiguration.cs" />
+    <Compile Include="Diagnostics\Trace.cs" />
     <Compile Include="ExceptionCatchingBundleCollectionInitializer.cs" />
     <Compile Include="FileAccessAuthorization.cs" />
+    <Compile Include="FileContentHasher.cs" />
     <Compile Include="FileSearchProvider.cs" />
     <Compile Include="HostBase.cs" />
     <Compile Include="BundleCollection.cs" />
+    <Compile Include="HtmlTemplates\AddHtmlTemplateToJavaScriptTransformers.cs" />
+    <Compile Include="HtmlTemplates\HtmlTemplateBundleExtensions.cs" />
+    <Compile Include="HtmlTemplates\WrapJavaScriptHtmlTemplates.cs" />
+    <Compile Include="HtmlTemplates\IHtmlTemplateIdStrategy.cs" />
+    <Compile Include="HtmlTemplates\HtmlTemplateToJavaScriptTransformer.cs" />
+    <Compile Include="HtmlTemplates\HtmlTemplateIdBuilder.cs" />
+    <Compile Include="HtmlTemplates\JavaScriptHtmlTemplatePipeline.cs" />
+    <Compile Include="HtmlTemplates\WrapJavaScriptHtmlTemplatesTransformer.cs" />
     <Compile Include="IBundleCacheRebuilder.cs" />
     <Compile Include="IBundleCollectionInitializer.cs" />
     <Compile Include="IConfiguration.cs" />
     <Compile Include="IFileAccessAuthorization.cs" />
     <Compile Include="DeserializedAsset.cs" />
     <Compile Include="IBundleDeserializer.cs" />
+    <Compile Include="IFileContentHasher.cs" />
     <Compile Include="IJsonSerializer.cs" />
     <Compile Include="RawFileReferenceFinder.cs" />
     <Compile Include="ResourceAsset.cs" />
@@ -117,10 +145,8 @@
     <Compile Include="CompileContext.cs" />
     <Compile Include="CompileResult.cs" />
     <Compile Include="ConditionalRenderer.cs" />
-    <Compile Include="ExternalBundleGenerator.cs" />
     <Compile Include="FilePathComparer.cs" />
     <Compile Include="IFileSearchModifier.cs" />
-    <Compile Include="ConstantHtmlRenderer.cs" />
     <Compile Include="BundleCollectionInitializer.cs" />
     <Compile Include="DelegatingDisposable.cs" />
     <Compile Include="FileSystemWatchingBundleRebuilder.cs" />
@@ -188,7 +214,6 @@
     <Compile Include="IO\NonExistentFile.cs" />
     <Compile Include="IPlaceholderTracker.cs" />
     <Compile Include="IReferenceBuilder.cs" />
-    <Compile Include="DisposableLazy.cs" />
     <Compile Include="IUrlGenerator.cs" />
     <Compile Include="BundleDescriptor.cs" />
     <Compile Include="BundleProcessing\AddTransformerToAssets.cs" />
@@ -248,7 +273,6 @@
     <Compile Include="Stylesheets\ExpandCssUrls.cs" />
     <Compile Include="TinyIoC\TinyIoC.cs" />
     <Compile Include="TinyIoC\TinyIoCExtensions.cs" />
-    <Compile Include="Trace.cs" />
     <Compile Include="Scripts\InlineScriptBundle.cs" />
     <Compile Include="HtmlTemplates\HtmlTemplateBundle.cs" />
     <Compile Include="HtmlTemplates\HtmlTemplateBundleFactory.cs" />
@@ -279,6 +303,7 @@
     <Compile Include="Stylesheets\StylesheetBundleFactory.cs" />
     <Compile Include="UrlGenerator.cs" />
     <Compile Include="Utilities\ByteArrayExtensions.cs" />
+    <Compile Include="Utilities\DisposableLazy.cs" />
     <Compile Condition="'$(TargetFrameworkVersion)' == 'v3.5'" Include="Utilities\EnumT.cs" />
     <Compile Include="Utilities\HashedSets.cs" />
     <Compile Include="Utilities\JavaScriptUtilities.cs" />

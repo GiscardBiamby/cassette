@@ -15,7 +15,7 @@ namespace Cassette.Aspnet
     public class BundleRequestHandler_Tests : IDisposable
     {
         readonly Mock<HttpContextBase> httpContext;
-        readonly Mock<HttpRequestBase> request;
+        protected readonly Mock<HttpRequestBase> request;
         protected readonly Mock<HttpResponseBase> response;
         protected readonly Mock<HttpCachePolicyBase> responseCache;
         protected readonly NameValueCollection requestHeaders;
@@ -43,6 +43,7 @@ namespace Cassette.Aspnet
             response.SetupGet(r => r.Cache).Returns(responseCache.Object);
 
             request.SetupGet(r => r.Headers).Returns(requestHeaders);
+            request.SetupGet(x => x.RawUrl).Returns("~/010203/test");
 
             var settings = new CassetteSettings();
             bundles = new BundleCollection(settings, Mock.Of<IFileSearchProvider>(), Mock.Of<IBundleFactoryProvider>());
@@ -111,6 +112,14 @@ namespace Cassette.Aspnet
         }
 
         [Fact]
+        public void MaxAgeIsSetToOneYear()
+        {
+            // Setting the cache to Public, then the MaxAge will be set on the asset.
+            responseCache.Verify(c => c.SetCacheability(HttpCacheability.Public));
+            responseCache.Verify(c => c.SetMaxAge(It.Is<TimeSpan>(t => t.TotalDays >= 365)));
+        }
+
+        [Fact]
         public void ResponseIsPubliclyCacheable()
         {
             responseCache.Verify(c => c.SetCacheability(HttpCacheability.Public));
@@ -124,15 +133,30 @@ namespace Cassette.Aspnet
         }
     }
 
+    public class GivenBundleExists_WhenProcessRequest_With_Hash_Mismatch : BundleRequestHandler_Tests {
+        public GivenBundleExists_WhenProcessRequest_With_Hash_Mismatch()
+        {
+            SetupTestBundle();
+            request.SetupGet(x => x.RawUrl).Returns("~/HASH-MISMATCH/test");
+            var handler = CreateRequestHandler();
+            handler.ProcessRequest("~/test");
+        }
+
+        [Fact]
+        public void ResponseSetToNoCache() {
+            response.VerifySet(r => r.CacheControl = "no-cache");
+        }
+    }
+
+
     public class GivenBundleDoesNotExist : BundleRequestHandler_Tests
     {
         [Fact]
         public void HandlerReturns404()
         {
             var handler = CreateRequestHandler();
-
-            handler.ProcessRequest("~/notfound");
-
+            var httpException = Assert.Throws<HttpException>(() => handler.ProcessRequest("~/notfound"));
+            httpException.GetHttpCode().ShouldEqual(404);
             response.VerifySet(r => r.StatusCode = 404);
         }
     }
@@ -220,13 +244,77 @@ namespace Cassette.Aspnet
         }
 
         [Fact]
-        public void ResponseFilterIsDeflateStream()
+        public void ResponseFilterIsGZipStream()
         {
             response.VerifySet(r => r.Filter = It.IsAny<GZipStream>());
         }
 
         [Fact]
-        public void ContentEncodingHeaderIsDeflate()
+        public void ContentEncodingHeaderIsGzip()
+        {
+            response.Verify(r => r.AppendHeader("Content-Encoding", "gzip"));
+        }
+
+        [Fact]
+        public void VeryHeaderIsAcceptEncoding()
+        {
+            response.Verify(r => r.AppendHeader("Vary", "Accept-Encoding"));
+        }
+    }
+
+    public class GivenRequestMultipleEncodingsNoQValue_WhenProcessRequest : BundleRequestHandler_Tests
+    {
+        public GivenRequestMultipleEncodingsNoQValue_WhenProcessRequest()
+        {
+            requestHeaders.Add("Accept-Encoding", "gzip,deflate");
+            response.SetupGet(r => r.Filter).Returns(Stream.Null);
+
+            SetupTestBundle();
+
+            var handler = CreateRequestHandler();
+            handler.ProcessRequest("~/test");
+        }
+
+        [Fact]
+        public void ResponseFilterIsGZipStream()
+        {
+            response.VerifySet(r => r.Filter = It.IsAny<GZipStream>());
+        }
+
+        [Fact]
+        public void ContentEncodingHeaderIsGzip()
+        {
+            response.Verify(r => r.AppendHeader("Content-Encoding", "gzip"));
+        }
+
+        [Fact]
+        public void VeryHeaderIsAcceptEncoding()
+        {
+            response.Verify(r => r.AppendHeader("Vary", "Accept-Encoding"));
+        }
+    }
+
+    public class GivenRequestMultipleEncodingsEquivalentQValues_WhenProcessRequest : BundleRequestHandler_Tests
+    {
+        public GivenRequestMultipleEncodingsEquivalentQValues_WhenProcessRequest()
+        {
+            requestHeaders.Add("Accept-Encoding", "gzip;q=1.0, deflate;q=1.0");
+            response.SetupGet(r => r.Filter).Returns(Stream.Null);
+
+            SetupTestBundle();
+
+            var handler = CreateRequestHandler();
+            handler.ProcessRequest("~/test");
+        }
+
+        [Fact]
+        public void ResponseFilterIsGZipStream()
+        {
+            response.VerifySet(r => r.Filter = It.IsAny<GZipStream>());
+        }
+
+        [Fact]
+        public void ContentEncodingHeaderIsGzip()
         {
             response.Verify(r => r.AppendHeader("Content-Encoding", "gzip"));
         }

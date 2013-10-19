@@ -2,11 +2,13 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using Cassette.IO;
 using Cassette.Utilities;
+using Trace = Cassette.Diagnostics.Trace;
 
 #if NET35
 using Iesi.Collections.Generic;
@@ -70,12 +72,21 @@ namespace Cassette
             readerWriterLock.EnterWriteLock();
             return new DelegatingDisposable(() =>
             {
+                // get the snapshot from inside the lock.
+                var updatedCollection = GetReadOnlySnapshot();
                 readerWriterLock.ExitWriteLock();
                 // Make the sweeping assumption that if someone asked for a write lock
                 // then they changed the collection in some way.
                 // In future we can look at actually checking for changes.
-                Changed(this, new BundleCollectionChangedEventArgs(new ReadOnlyCollection<Bundle>(bundles)));
+                Changed(this, new BundleCollectionChangedEventArgs(updatedCollection));
             });
+        }
+
+        ReadOnlyCollection<Bundle> GetReadOnlySnapshot()
+        {
+            Debug.Assert(readerWriterLock.IsReadLockHeld || readerWriterLock.IsWriteLockHeld);
+            // taking a snapshot is not necessarily safe if we don't hold a lock.
+            return new ReadOnlyCollection<Bundle>(bundles.ToList());
         }
 
         /// <summary>
@@ -113,7 +124,7 @@ namespace Cassette
             }
         }
 
-        void Remove(Bundle bundle)
+        public void Remove(Bundle bundle)
         {
             bundles.Remove(bundle);
         }
@@ -735,22 +746,32 @@ namespace Cassette
             }
         }
 
-        internal IEnumerable<Bundle> IncludeReferencesAndSortBundles(IEnumerable<Bundle> bundlesToSort)
+        internal IEnumerable<Bundle> FindAllReferences(Bundle bundle)
         {
             if (bundleImmediateReferences == null)
             {
-                throw new InvalidOperationException("BuildReferences must be called once before IncludeReferencesAndSortBundles can be called.");
+                throw new InvalidOperationException("BuildReferences must be called once before FindAllReferences can be called.");
             }
 
-            var all = GetAllRequiredBundles(bundlesToSort);
-            var partitioned = PartitionByBaseType(all).SelectMany(b => b).ToArray();
-            var graph = BuildBundleGraph(bundleImmediateReferences, partitioned);
+            var set = new HashedSet<Bundle>();
+            AddReferencedBundlesToSet(bundle, set);
+            return set;
+        }
+
+        internal IEnumerable<Bundle> SortBundles(IEnumerable<Bundle> bundles)
+        {
+            var partitioned = PartitionByBaseType(bundles).SelectMany(b => b).ToArray();
+            var graph = BuildBundleGraph(partitioned);
             return graph.TopologicalSort();
         }
 
         IEnumerable<IEnumerable<Bundle>> PartitionByBaseType(IEnumerable<Bundle> bundlesToSort)
         {
+#if NET35
+            return bundlesToSort.GroupBy(GetBundleBaseType).Select(x=>x.AsEnumerable());
+#else
             return bundlesToSort.GroupBy(GetBundleBaseType);
+#endif
         }
 
         Type GetBundleBaseType(Bundle bundle)
@@ -763,38 +784,30 @@ namespace Cassette
             return type;
         }
 
-        IEnumerable<Bundle> GetAllRequiredBundles(IEnumerable<Bundle> bundlesArray)
+        Graph<Bundle> BuildBundleGraph(IEnumerable<Bundle> all)
         {
-            var all = new HashedSet<Bundle>();
-            foreach (var bundle in bundlesArray)
-            {
-                AddReferencedBundlesToSet(bundle, all);
-            }
-            return all;
-        }
-
-        Graph<Bundle> BuildBundleGraph(IDictionary<Bundle, HashedSet<Bundle>> references, IEnumerable<Bundle> all)
-        {
+            var bundles = new HashedSet<Bundle>(all.ToArray());
             return new Graph<Bundle>(
-                all,
+                bundles,
                 bundle =>
                 {
-                    HashedSet<Bundle> set;
-                    if (references.TryGetValue(bundle, out set)) return set;
+                    HashedSet<Bundle> references;
+                    if (bundleImmediateReferences.TryGetValue(bundle, out references))
+                    {
+                        return references.Intersect(bundles);
+                    }
                     return Enumerable.Empty<Bundle>();
                 }
             );
         }
 
-        void AddReferencedBundlesToSet(Bundle referencer, ISet<Bundle> all)
+        void AddReferencedBundlesToSet(Bundle referencer, HashedSet<Bundle> all)
         {
-            if (all.Contains(referencer)) return;
-            all.Add(referencer);
-
             HashedSet<Bundle> referencedBundles;
             if (!bundleImmediateReferences.TryGetValue(referencer, out referencedBundles)) return;
             foreach (var referencedBundle in referencedBundles)
             {
+                all.Add(referencedBundle);
                 AddReferencedBundlesToSet(referencedBundle, all);
             }
         }

@@ -1,6 +1,9 @@
-﻿using System.Web;
+﻿using System.Net;
+using System.Web;
 using System.Web.Routing;
 using Cassette.Utilities;
+using Trace = Cassette.Diagnostics.Trace;
+using System;
 
 namespace Cassette.Aspnet
 {
@@ -27,8 +30,8 @@ namespace Cassette.Aspnet
                 if (!bundles.TryGetAssetByPath(path, out asset, out bundle))
                 {
                     Trace.Source.TraceInformation("Bundle asset not found with path \"{0}\".", path);
-                    NotFound(response);
-                    return;
+                    response.StatusCode = (int) HttpStatusCode.NotFound;
+                    throw new HttpException((int) HttpStatusCode.NotFound, "Asset not found");
                 }
 
                 var request = requestContext.HttpContext.Request;
@@ -41,8 +44,12 @@ namespace Cassette.Aspnet
             response.ContentType = bundle.ContentType;
 
             var actualETag = "\"" + asset.Hash.ToHexString() + "\"";
-            response.Cache.SetCacheability(HttpCacheability.Public);
-            response.Cache.SetETag(actualETag);
+            if(request.RawUrl.Contains(asset.Hash.ToHexString())) {
+                CacheLongTime(response, actualETag);
+            }
+            else {
+                NoCache(response);
+            }
 
             var givenETag = request.Headers["If-None-Match"];
             if (givenETag == actualETag)
@@ -58,15 +65,23 @@ namespace Cassette.Aspnet
             }
         }
 
+        void CacheLongTime(HttpResponseBase response, string actualETag)
+        {
+            response.Cache.SetCacheability(HttpCacheability.Public);
+            response.Cache.SetExpires(DateTime.UtcNow.AddYears(1));
+            response.Cache.SetMaxAge(new TimeSpan(365, 0, 0, 0));
+            response.Cache.SetETag(actualETag);
+        }
+
+        void NoCache(HttpResponseBase response) {
+            response.AddHeader("Pragma", "no-cache");
+            response.CacheControl = "no-cache";
+            response.Expires = -1;
+        }
+
         void SendNotModified(HttpResponseBase response)
         {
             response.StatusCode = 304; // Not Modified
-            response.SuppressContent = true;
-        }
-
-        void NotFound(HttpResponseBase response)
-        {
-            response.StatusCode = 404;
             response.SuppressContent = true;
         }
     }

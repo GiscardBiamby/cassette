@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Cassette.Utilities
 {
-    static class ByteArrayExtensions
+    public static class ByteArrayExtensions
     {
         public static string ToHexString(this IEnumerable<byte> bytes)
         {
@@ -19,14 +19,6 @@ namespace Cassette.Utilities
                 bytes[i / 2] = Convert.ToByte(hex.Substring(i, 2), 16);
             }
             return bytes;
-        }
-
-        public static string ToUrlSafeBase64String(this byte[] bytes)
-        {
-            return Convert
-                .ToBase64String(bytes)
-                .Replace('+', '-')
-                .Replace('/', '_');
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Xml.Linq;
 using Cassette.IO;
+using Cassette.TinyIoC;
 using Cassette.Utilities;
 
 namespace Cassette
@@ -10,13 +11,13 @@ namespace Cassette
     abstract class BundleDeserializer<T> : IBundleDeserializer<T>
         where T : Bundle
     {
-        readonly IUrlModifier urlModifier;
+        readonly TinyIoCContainer container;
         IDirectory directory;
         XElement element;
 
-        protected BundleDeserializer(IUrlModifier urlModifier)
+        protected BundleDeserializer(TinyIoCContainer container)
         {
-            this.urlModifier = urlModifier;
+            this.container = container;
         }
 
         protected abstract T CreateBundle(XElement element);
@@ -64,20 +65,12 @@ namespace Cassette
             return element.AttributeValueOrThrow(
                 attributeName,
                 () => new CassetteDeserializationException(string.Format("Bundle manifest element missing \"{0}\" attribute.", attributeName))
-                );
+            );
         }
 
         protected string GetOptionalAttribute(string attributeName)
         {
             return element.AttributeValueOrNull(attributeName);
-        }
-
-        string GetHtml()
-        {
-            var htmlElement = element.Elements("Html").FirstOrDefault();
-            return htmlElement != null
-                ? htmlElement.Value
-                : "";
         }
 
         void AddAssets(Bundle bundle)
@@ -86,7 +79,7 @@ namespace Cassette
             var assets = assetElements.Select(e => new AssetDeserializer().Deserialize(e)).ToArray();
             if (assets.Length == 0) return;
             var contentFile = directory.GetFile(bundle.CacheFilename);
-            bundle.Assets.Add(new CachedBundleContent(contentFile, assets, urlModifier));
+            bundle.Assets.Add(new CachedBundleContent(contentFile, assets));
         }
 
         void AddReferences(Bundle bundle)
@@ -137,9 +130,14 @@ namespace Cassette
             );
         }
 
-        protected ConstantHtmlRenderer<TBundle> CreateHtmlRenderer<TBundle>() where TBundle : Bundle
+        protected IBundleHtmlRenderer<TBundle> CreateHtmlRenderer<TBundle>(string attributeName = "Renderer") where TBundle : Bundle
         {
-            return new ConstantHtmlRenderer<TBundle>(GetHtml(), urlModifier);
+            var typeName = element.AttributeValueOrThrow(
+                attributeName,
+                () => new CassetteDeserializationException(string.Format("Bundle manifest element missing \"{0}\" attribute.", attributeName))
+            );
+            var type = Type.GetType(typeName, true);
+            return (IBundleHtmlRenderer<TBundle>)container.Resolve(type);
         }
     }
 }

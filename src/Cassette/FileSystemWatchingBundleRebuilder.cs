@@ -5,13 +5,14 @@ using System.Linq;
 using System.Threading;
 using Cassette.IO;
 using Cassette.Utilities;
+using Trace = Cassette.Diagnostics.Trace;
 
 namespace Cassette
 {
     /// <summary>
     /// Watches the source directory for file system changes. Rebuilds the <see cref="BundleCollection"/>.
     /// </summary>
-    class FileSystemWatchingBundleRebuilder : IStartUpTask, IDisposable
+    public class FileSystemWatchingBundleRebuilder : IStartUpTask, IDisposable
     {
         readonly CassetteSettings settings;
         readonly BundleCollection bundles;
@@ -195,8 +196,11 @@ namespace Cassette
 
         void RebuildBundles()
         {
-            Trace.Source.TraceInformation("Rebuilding bundles due to file system changes.");
-            initializer.Initialize(bundles);
+            lock (initializer)
+            {
+                Trace.Source.TraceInformation("Rebuilding bundles due to file system changes.");
+                initializer.Initialize(bundles);
+            }
         }
 
         /// <summary>
@@ -204,8 +208,17 @@ namespace Cassette
         /// </summary>
         public void Dispose()
         {
-            fileSystemWatcher.Dispose();
-            rebuildDelayTimer.Dispose();
+            var fileSystemWatcherCopy = fileSystemWatcher;
+            if (fileSystemWatcherCopy != null)
+            {
+                fileSystemWatcherCopy.Dispose();
+            }
+
+            var rebuildDelayTimerCopy = rebuildDelayTimer;
+            if (rebuildDelayTimerCopy != null)
+            {
+                rebuildDelayTimerCopy.Dispose();
+            }
         }
     }
 }

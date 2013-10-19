@@ -9,7 +9,7 @@ namespace Cassette.Utilities
 
 #if !NET35
     // Redirect for 4.0 to native
-    class HashedSet<T> : HashSet<T>
+    public class HashedSet<T> : HashSet<T>
     {
         public HashedSet()
         {}
@@ -19,12 +19,12 @@ namespace Cassette.Utilities
     }
 
     // Redirect to Native implementation
-    class HashedCompareSet<T> : HashSet<T> {
+    public class HashedCompareSet<T> : HashSet<T> {
         public HashedCompareSet(IEnumerable<T> initialValues, IEqualityComparer<T> comparer)
             : base(initialValues, comparer) {}
     }
 #else
-    sealed class HashedCompareSet<T> : DictionarySet<T>
+    public class HashedCompareSet<T> : DictionarySet<T>
     {
         public HashedCompareSet(ICollection<T> initialValues, IEqualityComparer<T> comparer)
         {

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,6 +10,7 @@ using Cassette.Caching;
 using Cassette.IO;
 using Cassette.Scripts;
 using Cassette.Stylesheets;
+using Cassette.TinyIoC;
 using Microsoft.Build.Framework;
 using Moq;
 using Should;
@@ -16,6 +18,54 @@ using Xunit;
 
 namespace Cassette.MSBuild
 {
+    [Serializable]
+    public class BuildEngineStub : IBuildEngine
+    {
+        public BuildEngineStub()
+        {
+            BuildErrorEventArgs = new List<BuildErrorEventArgs>();
+            BuildWarningEventArgs = new List<BuildWarningEventArgs>();
+            BuildMessageEventArgs = new List<BuildMessageEventArgs>();
+            CustomBuildEventArgs = new List<CustomBuildEventArgs>();
+        }
+
+        public List<BuildErrorEventArgs> BuildErrorEventArgs { get; set; }
+        public List<BuildWarningEventArgs> BuildWarningEventArgs { get; set; }
+        public List<BuildMessageEventArgs> BuildMessageEventArgs { get; set; }
+        public List<CustomBuildEventArgs> CustomBuildEventArgs { get; set; }
+
+        public void LogErrorEvent(BuildErrorEventArgs e)
+        {
+            BuildErrorEventArgs.Add(e);
+        }
+
+        public void LogWarningEvent(BuildWarningEventArgs e)
+        {
+            BuildWarningEventArgs.Add(e);
+        }
+
+        public void LogMessageEvent(BuildMessageEventArgs e)
+        {
+            BuildMessageEventArgs.Add(e);
+        }
+
+        public void LogCustomEvent(CustomBuildEventArgs e)
+        {
+            CustomBuildEventArgs.Add(e);
+        }
+
+        public bool BuildProjectFile(string projectFileName, string[] targetNames, IDictionary globalProperties,
+                                     IDictionary targetOutputs)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public bool ContinueOnError { get; private set; }
+        public int LineNumberOfTaskNode { get; private set; }
+        public int ColumnNumberOfTaskNode { get; private set; }
+        public string ProjectFileOfTaskNode { get; private set; }
+    }
+
     public class GivenConfigurationClassInAssembly_WhenExecute : IDisposable
     {
         readonly TempDirectory path;
@@ -31,20 +81,30 @@ namespace Cassette.MSBuild
             BundleConfiguration.GenerateAssembly(assemblyPath);
 
             File.WriteAllText(Path.Combine(path, "test.css"), "p { background-image: url(test.png); }");
-            File.WriteAllText(Path.Combine(path, "test.coffee"), "x = 1");
+            File.WriteAllText(Path.Combine(path, "test.coffee"), "x = 1\nlog(x)");
             File.WriteAllText(Path.Combine(path, "test.png"), "");
 
             Environment.CurrentDirectory = path;
             cachePath = Path.Combine(path, "cache");
+
+            var buildEngine = new BuildEngineStub();
 
             var task = new CreateBundles
             {
                 Source = path,
                 Bin = path,
                 Output = cachePath,
-                BuildEngine = Mock.Of<IBuildEngine>()
+                AppVirtualPath = "/app/",
+                BuildEngine = buildEngine
             };
-            task.Execute();
+            try
+            {
+                task.Execute();
+            }
+            catch (Exception exception)
+            {
+                var t = exception.ToString();
+            }
         }
 
         [Fact]
@@ -57,34 +117,28 @@ namespace Cassette.MSBuild
         public void CoffeeScriptIsCompiled()
         {
             var filename = Directory.GetFiles(Path.Combine(cachePath, "script"))[0];
-            File.ReadAllText(filename).ShouldEqual("(function(){var n;n=1}).call(this)");
+            File.ReadAllText(filename).ShouldEqual("(function(){var n;n=1,log(n)}).call(this)");
         }
    
         [Fact]
         public void CssUrlIsRewrittenToBeApplicationRooted()
         {
-            var passThroughModifier = new Mock<IUrlModifier>();
-            passThroughModifier
-                .Setup(m => m.Modify(It.IsAny<string>()))
-                .Returns<string>(url => url)
-                .Verifiable();
-
-            var bundles = LoadBundlesFromManifestFile(passThroughModifier.Object);
+            var bundles = LoadBundlesFromManifestFile();
             var content = bundles.OfType<StylesheetBundle>().First().OpenStream().ReadToEnd();
 
-            Regex.IsMatch(content, @"url\(cassette.axd/file/test-.*?\.png\)")
+            Regex.IsMatch(content, @"url\(/app/cassette.axd/file/test-.*?\.png\)")
                  .ShouldBeTrue("Incorrect content: " + content);
-
-            passThroughModifier.Verify();
         }
 
-        IEnumerable<Bundle> LoadBundlesFromManifestFile(IUrlModifier urlModifier)
+        IEnumerable<Bundle> LoadBundlesFromManifestFile()
         {
+            var container = new TinyIoCContainer();
+            container.Register(Mock.Of<IUrlGenerator>());
             var cache = new BundleCollectionCache(
                 new FileSystemDirectory(cachePath), 
                 b => b == "StylesheetBundle" 
-                    ? (IBundleDeserializer<Bundle>)new StylesheetBundleDeserializer(urlModifier) 
-                    : new ScriptBundleDeserializer(urlModifier)
+                    ? (IBundleDeserializer<Bundle>)new StylesheetBundleDeserializer(container)
+                    : new ScriptBundleDeserializer(container)
             );
             var result = cache.Read();
             result.IsSuccess.ShouldBeTrue();
@@ -115,6 +169,11 @@ namespace Cassette.MSBuild
                 File.Copy(parentAssembly, Path.Combine(directory, Path.GetFileName(parentAssembly)));
                 File.Copy("Cassette.dll", Path.Combine(directory, "Cassette.dll"));
                 File.Copy("AjaxMin.dll", Path.Combine(directory, "AjaxMin.dll"));
+#if NET35
+                File.Copy("Iesi.Collections.dll", Path.Combine(directory, "Iesi.Collections.dll"));
+                File.Copy("Jurassic.dll", Path.Combine(directory, "Jurassic.dll"));
+
+#endif
                 File.Copy("Cassette.CoffeeScript.dll", Path.Combine(directory, "Cassette.CoffeeScript.dll"));
                 File.Copy("Cassette.Less.dll", Path.Combine(directory, "Cassette.Less.dll"));
 #if !NET35

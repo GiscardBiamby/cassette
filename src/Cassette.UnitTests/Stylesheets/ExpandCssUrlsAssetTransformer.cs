@@ -15,8 +15,8 @@ namespace Cassette.Stylesheets
             };
 
             urlGenerator = new Mock<IUrlGenerator>();
-            urlGenerator.Setup(u => u.CreateRawFileUrl(It.IsAny<string>(), It.IsAny<string>()))
-                        .Returns<string, string>((f, h) => "EXPANDED");
+            urlGenerator.Setup(u => u.CreateRawFileUrl(It.IsAny<string>()))
+                        .Returns<string>(f => "EXPANDED");
             
             transformer = new ExpandCssUrlsAssetTransformer(fileSystem, urlGenerator.Object);
             asset = new Mock<IAsset>();
@@ -39,9 +39,50 @@ namespace Cassette.Stylesheets
 
             output.ShouldEqual("p { background-image: url(EXPANDED); }");
 
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png", It.IsAny<string>()));
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png"));
         }
 
+        [Fact]
+        public void GivenCssWithRelativeUrlWithQueryString_WhenTransformed_ThenUrlIsExpanded()
+        {
+            fileSystem.Add("~/styles/test.png");
+
+            var css = "p { background-image: url(test.png?param=value); }";
+            var getResult = transformer.Transform(css.AsStream, asset.Object);
+            var output = getResult().ReadToEnd();
+
+            output.ShouldEqual("p { background-image: url(EXPANDED?param=value); }");
+
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png"));
+        }
+
+        [Fact]
+        public void GivenCssWithRelativeUrlWithFragment_WhenTransformed_ThenUrlIsExpanded()
+        {
+            fileSystem.Add("~/styles/test.png");
+
+            var css = "p { background-image: url(test.png#fragment); }";
+            var getResult = transformer.Transform(css.AsStream, asset.Object);
+            var output = getResult().ReadToEnd();
+
+            output.ShouldEqual("p { background-image: url(EXPANDED#fragment); }");
+
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png"));
+        }
+
+        [Fact]
+        public void GivenCssWithRelativeUrlWithQueryStringAndFragment_WhenTransformed_ThenUrlIsExpanded()
+        {
+            fileSystem.Add("~/styles/test.png");
+
+            var css = "p { background-image: url(test.png?param#fragment); }";
+            var getResult = transformer.Transform(css.AsStream, asset.Object);
+            var output = getResult().ReadToEnd();
+
+            output.ShouldEqual("p { background-image: url(EXPANDED?param#fragment); }");
+
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png"));
+        }
         [Fact]
         public void GivenCssUrlFileIsNotFound_WhenTransform_ThenUrlIsExpandedToAbsolutePath()
         {
@@ -110,19 +151,6 @@ namespace Cassette.Stylesheets
         }
 
         [Fact]
-        public void GivenCssWithUrlWithFragment_WhenTransformed_ThenUrlIsExpanded()
-        {
-            fileSystem.Add("~/styles/test.png");
-            var css = "p { background-image: url(test.png#fragment); }";
-            var getResult = transformer.Transform(css.AsStream, asset.Object);
-            var output = getResult().ReadToEnd();
-
-            output.ShouldEqual("p { background-image: url(EXPANDED); }");
-
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png", It.IsAny<string>()));
-        }
-
-        [Fact]
         public void GivenCssWithWhitespaceAroundRelativeUrl_WhenTransformed_ThenUrlIsExpanded()
         {
             fileSystem.Add("~/styles/test.png");
@@ -177,7 +205,7 @@ namespace Cassette.Stylesheets
 
             output.ShouldEqual("p { background-image: url(EXPANDED); }");
 
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png", It.IsAny<string>()));
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/test.png"));
         }
 
         [Fact]
@@ -231,7 +259,7 @@ namespace Cassette.Stylesheets
 
             output.ShouldEqual("p { background-image: url(EXPANDED); }");
 
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/images/test.png", It.IsAny<string>()));
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/images/test.png"));
         }
 
         [Fact]
@@ -245,7 +273,7 @@ namespace Cassette.Stylesheets
 
             output.ShouldEqual("p { background-image: url(EXPANDED); }");
 
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/images/test.png", It.IsAny<string>()));
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/images/test.png"));
         }
 
         [Fact]
@@ -261,7 +289,23 @@ namespace Cassette.Stylesheets
 
             output.ShouldEqual("p { background-image: url(EXPANDED); }");
 
-            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/images/test.png", It.IsAny<string>()));
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/images/test.png"));
+        }
+
+        [Fact]
+        public void ItUnescapesUriToGetFilename()
+        {
+            // e.g. "%20" -> " "
+
+            fileSystem.Add("~/styles/space test.png");
+
+            var css = "p { background-image: url(space%20test.png); }";
+            var getResult = transformer.Transform(css.AsStream, asset.Object);
+            var output = getResult().ReadToEnd();
+
+            output.ShouldEqual("p { background-image: url(EXPANDED); }");
+
+            urlGenerator.Verify(g => g.CreateRawFileUrl("~/styles/space test.png"));
         }
     }
 }

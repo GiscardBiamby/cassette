@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Cassette.Utilities;
+using System;
 using System.Text.RegularExpressions;
 using System.Web;
 
@@ -8,13 +9,35 @@ namespace Cassette.Aspnet
     {
         readonly HttpContextBase context;
         readonly IFileAccessAuthorization fileAccessAuthorization;
+        readonly IFileContentHasher fileContentHasher;
         readonly HttpRequestBase request;
+        readonly MimeMappingWrapper mimeMapping;
+        readonly Action<string> rewritePath;
 
-        public RawFileRequestRewriter(HttpContextBase context, IFileAccessAuthorization fileAccessAuthorization)
+        public RawFileRequestRewriter(HttpContextBase context, IFileAccessAuthorization fileAccessAuthorization, IFileContentHasher fileContentHasher)
+            : this(context, fileAccessAuthorization, fileContentHasher, HttpRuntime.UsingIntegratedPipeline)
+        {
+        }
+
+        public RawFileRequestRewriter(HttpContextBase context, IFileAccessAuthorization fileAccessAuthorization, IFileContentHasher fileContentHasher, bool usingIntegratedPipeline)
         {
             this.context = context;
             this.fileAccessAuthorization = fileAccessAuthorization;
+            this.fileContentHasher = fileContentHasher;
             request = context.Request;
+
+            // RewritePath doesn't work as expected in IIS 6 or IIS 7 Classic pipeline
+            // Check if integrated pipeline is in use, and fall back to an alternate method if not.
+            if (usingIntegratedPipeline)
+            {
+                rewritePath = RewritePathIntegratedPipeline;
+            }
+            else
+            {
+                rewritePath = RewritePathClassicPipeline;
+                // Only required for classic pipeline
+                mimeMapping = new MimeMappingWrapper();
+            }
         }
 
         public void Rewrite()
@@ -26,8 +49,47 @@ namespace Cassette.Aspnet
 
             EnsureFileCanBeAccessed(path);
 
-            SetFarFutureExpiresHeader();
+            var hash = fileContentHasher.Hash(path).ToHexString();
+            var actualETag = "\"" + hash + "\"";
+
+            if (request.PathInfo.Contains(hash))
+            {
+                SetFarFutureExpiresHeader(context.Response, actualETag);
+            }
+            else
+            {
+                NoCache(context.Response);
+            }
+
+            var givenETag = request.Headers["If-None-Match"];
+            if (givenETag == actualETag)
+            {
+                SendNotModified(context.Response);
+            }
+
+            rewritePath(path);
+        }
+
+        void RewritePathIntegratedPipeline(string path)
+        {
             context.RewritePath(path);
+        }
+
+        void RewritePathClassicPipeline(string path)
+        {
+            path = context.Server.MapPath(path);
+            // Since we're not using the static file handler, we also need to set content type manually
+            context.Response.ContentType = mimeMapping.GetMimeMapping(path);
+            context.Response.TransmitFile(path);
+            context.ApplicationInstance.CompleteRequest();
+        }
+
+        void NoCache(HttpResponseBase response)
+        {
+            response.Cache.SetAllowResponseInBrowserHistory(false);
+            response.Cache.SetCacheability(HttpCacheability.NoCache);
+            response.Cache.SetNoStore();
+            response.Cache.SetExpires(DateTime.UtcNow);
         }
 
         bool IsCassetteRequest()
@@ -66,10 +128,7 @@ namespace Cassette.Aspnet
                     name = name.Substring(0, hyphenIndex);
                     return name + extension;
                 }
-                else
-                {
-                    return path;
-                }
+                return path;
             }
             else
             {
@@ -78,10 +137,7 @@ namespace Cassette.Aspnet
                 {
                     return path.Substring(0, hyphenIndex);
                 }
-                else
-                {
-                    return path;
-                }
+                return path;
             }
         }
 
@@ -93,9 +149,17 @@ namespace Cassette.Aspnet
             }
         }
 
-        void SetFarFutureExpiresHeader()
+        void SetFarFutureExpiresHeader(HttpResponseBase response, string actualETag)
         {
-            context.Response.Cache.SetExpires(DateTime.UtcNow.AddYears(1));
+            response.Cache.SetCacheability(HttpCacheability.Public);
+            response.Cache.SetExpires(DateTime.UtcNow.AddYears(1));
+            response.Cache.SetMaxAge(new TimeSpan(365, 0, 0, 0));
+            response.Cache.SetETag(actualETag);
+        }
+
+        void SendNotModified(HttpResponseBase response) {
+            response.StatusCode = 304; // Not Modified
+            response.SuppressContent = true;
         }
     }
 }

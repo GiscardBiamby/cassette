@@ -2,13 +2,15 @@
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Web;
 using System.Web.Routing;
 using Cassette.Utilities;
+using Trace = Cassette.Diagnostics.Trace;
 
 namespace Cassette.Aspnet
 {
-    class BundleRequestHandler<T> : ICassetteRequestHandler
+    internal class BundleRequestHandler<T> : ICassetteRequestHandler
         where T : Bundle
     {
         readonly BundleCollection bundles;
@@ -34,20 +36,19 @@ namespace Cassette.Aspnet
                 if (bundle == null)
                 {
                     Trace.Source.TraceInformation("Bundle not found \"{0}\".", path);
-                    response.StatusCode = 404;
+                    response.StatusCode = (int) HttpStatusCode.NotFound;
+                    throw new HttpException((int) HttpStatusCode.NotFound, "Bundle not found");
+                }
+
+                var actualETag = "\"" + bundle.Hash.ToHexString() + "\"";
+                var givenETag = request.Headers["If-None-Match"];
+                if (givenETag == actualETag)
+                {
+                    SendNotModified(actualETag);
                 }
                 else
                 {
-                    var actualETag = "\"" + bundle.Hash.ToHexString() + "\"";
-                    var givenETag = request.Headers["If-None-Match"];
-                    if (givenETag == actualETag)
-                    {
-                        SendNotModified(actualETag);
-                    }
-                    else
-                    {
-                        SendBundle(bundle, actualETag);
-                    }
+                    SendBundle(bundle, actualETag);
                 }
             }
         }
@@ -68,11 +69,18 @@ namespace Cassette.Aspnet
         void SendBundle(Bundle bundle, string actualETag)
         {
             response.ContentType = bundle.ContentType;
-            CacheLongTime(actualETag);
+            if(request.RawUrl.Contains(bundle.Hash.ToHexString()))
+            {
+                CacheLongTime(actualETag);
+            }
+            else
+            {
+                NoCache();
+            }
 
             var encoding = request.Headers["Accept-Encoding"];
             response.Filter = EncodeStreamAndAppendResponseHeaders(response.Filter, encoding);
-            
+
             using (var assetStream = bundle.OpenStream())
             {
                 assetStream.CopyTo(response.OutputStream);
@@ -83,29 +91,65 @@ namespace Cassette.Aspnet
         {
             response.Cache.SetCacheability(HttpCacheability.Public);
             response.Cache.SetExpires(DateTime.UtcNow.AddYears(1));
+            response.Cache.SetMaxAge(new TimeSpan(365, 0, 0, 0));
             response.Cache.SetETag(actualETag);
         }
 
-        Stream EncodeStreamAndAppendResponseHeaders(Stream stream, string encoding)
+        void NoCache()
         {
-            if (encoding == null)
-            {
-                return stream;
-            }
+            response.AddHeader("Pragma", "no-cache");
+            response.CacheControl = "no-cache";
+            response.Expires = -1;
+        }
 
-            if (encoding.IndexOf("deflate", StringComparison.OrdinalIgnoreCase) >= 0)
+        Stream EncodeStreamAndAppendResponseHeaders(Stream stream, string acceptEncoding)
+        {
+            if (acceptEncoding == null) return stream;
+
+            var preferredEncoding = ParsePreferredEncoding(acceptEncoding);
+            if (preferredEncoding == null) return stream;
+
+            response.AppendHeader("Content-Encoding", preferredEncoding);
+            response.AppendHeader("Vary", "Accept-Encoding");
+            if (preferredEncoding == "deflate")
             {
-                response.AppendHeader("Content-Encoding", "deflate");
-                response.AppendHeader("Vary", "Accept-Encoding");
                 return new DeflateStream(stream, CompressionMode.Compress, true);
             }
-            else if (encoding.IndexOf("gzip", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (preferredEncoding == "gzip")
             {
-                response.AppendHeader("Content-Encoding", "gzip");
-                response.AppendHeader("Vary", "Accept-Encoding");
                 return new GZipStream(stream, CompressionMode.Compress, true);
             }
-            return stream;
+
+            // This line should never be reached because we've filtered out unsupported encoding types.
+            // But the compiler doesn't know this. :)
+            throw new Exception("Unknown content encoding type \"" + preferredEncoding + "\".");
+        }
+
+        static readonly string[] AllowedEncodings = new[] { "gzip", "deflate" };
+
+        static string ParsePreferredEncoding(string acceptEncoding)
+        {
+            return acceptEncoding
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(type => type.Split(';'))
+                .Select(parts => new
+                {
+                    encoding = parts[0].Trim(),
+                    qvalue = ParseQValueFromSecondArrayElement(parts)
+                })
+                .Where(x => AllowedEncodings.Contains(x.encoding))
+                .OrderByDescending(x => x.qvalue)
+                .Select(x => x.encoding)
+                .FirstOrDefault();
+        }
+
+        static float ParseQValueFromSecondArrayElement(string[] parts)
+        {
+            const float defaultQValue = 1f;
+            if (parts.Length < 2) return defaultQValue;
+
+            float qvalue;
+            return float.TryParse(parts[1].Trim(), out qvalue) ? qvalue : defaultQValue;
         }
     }
 }

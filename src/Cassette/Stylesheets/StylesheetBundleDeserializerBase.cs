@@ -1,10 +1,12 @@
+using Cassette.TinyIoC;
+
 namespace Cassette.Stylesheets
 {
     abstract class StylesheetBundleDeserializerBase<T> : BundleDeserializer<T>
         where T : StylesheetBundle
     {
-        protected StylesheetBundleDeserializerBase(IUrlModifier urlModifier) 
-            : base(urlModifier)
+        protected StylesheetBundleDeserializerBase(TinyIoCContainer container) 
+            : base(container)
         {
         }
 

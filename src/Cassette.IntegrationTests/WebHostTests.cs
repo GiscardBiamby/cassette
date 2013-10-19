@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Web;
@@ -91,7 +90,7 @@ namespace Cassette
                 var scriptUrls = GetPageHtmlResourceUrls(host, "scripts/bundle-c");
 
                 scriptUrls[0].ShouldMatch(new Regex(@"^/cassette\.axd/script/[^/]+/scripts/bundle-c"));
-                Download(host, scriptUrls[0]).ShouldEqual(@"(function(){var n;n=1}).call(this)");
+                Download(host, scriptUrls[0]).ShouldEqual(@"(function(){var n;n=1,log(n)}).call(this)");
             }
         }
 
@@ -147,21 +146,6 @@ namespace Cassette
 
                 http.Get(url);
                 return http.ResponseOutputStream.ReadToEnd();
-            }
-        }
-
-        class BundleConfiguration : IConfiguration<BundleCollection>
-        {
-            readonly Action<BundleCollection> addBundles;
-
-            public BundleConfiguration(Action<BundleCollection> addBundles)
-            {
-                this.addBundles = addBundles;
-            }
-
-            public void Configure(BundleCollection bundles)
-            {
-                addBundles(bundles);
             }
         }
     }

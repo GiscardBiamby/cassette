@@ -4,9 +4,12 @@ using System.Linq;
 using System.Reflection;
 using Cassette.Caching;
 using Cassette.HtmlTemplates;
+using Cassette.IO;
 using Cassette.Scripts;
 using Cassette.Stylesheets;
 using Cassette.TinyIoC;
+using Cassette.Utilities;
+using Trace = Cassette.Diagnostics.Trace;
 
 #if NET35
 using System.Reflection.Emit;
@@ -87,6 +90,7 @@ namespace Cassette
             RegisterBundleFactoryProvider();
             RegisterFileSearchProvider();
             RegisterFileAccessAuthorization();
+            RegisterFileContentHasher();
             RegisterPerRequestServices();
             RegisterConfigurationTypes();
             RegisterJsonSerializer();
@@ -103,7 +107,7 @@ namespace Cassette
 
         void RegisterUrlGenerator()
         {
-            container.Register<IUrlGenerator>((c, n) => new UrlGenerator(c.Resolve<IUrlModifier>(), "cassette.axd/"));
+            container.Register<IUrlGenerator>((c, n) => new UrlGenerator(c.Resolve<IUrlModifier>(), c.Resolve<CassetteSettings>().SourceDirectory, "cassette.axd/"));
         }
 
         void RegisterCache()
@@ -140,7 +144,7 @@ namespace Cassette
             { typeof(ExternalStylesheetBundle).Name, typeof(ExternalStylesheetBundleDeserializer) }
         };
 
-        internal static IBundleDeserializer<Bundle> ResolveBundleDeserializer(string bundleTypeName, TinyIoCContainer container)
+        protected static IBundleDeserializer<Bundle> ResolveBundleDeserializer(string bundleTypeName, TinyIoCContainer container)
         {
             var deserializerType = BundleDeserializers[bundleTypeName];
             return (IBundleDeserializer<Bundle>)container.Resolve(deserializerType);
@@ -196,6 +200,11 @@ namespace Cassette
         void RegisterFileAccessAuthorization()
         {
             container.Register<IFileAccessAuthorization, FileAccessAuthorization>().AsSingleton();
+        }
+
+        void RegisterFileContentHasher()
+        {
+            container.Register<IFileContentHasher, FileContentHasher>();
         }
 
         void RegisterPerRequestServices()
@@ -277,7 +286,7 @@ namespace Cassette
             foreach (var configs in groupedByRegistrationType)
             {
                 var registrationType = configs.Key;
-                var implementationTypes = configs;
+                var implementationTypes = configs.OrderBy(ConfigurationOrderAttribute.GetOrder);
                 container.RegisterMultiple(registrationType, implementationTypes);
             }
         }
